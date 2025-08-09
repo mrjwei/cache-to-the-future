@@ -1,42 +1,134 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+:root {
+  --bg: #0f1221;
+  --card: #151935;
+  --text: #e6e9ff;
+  --muted: #a3a7c7;
+  --brand: #7c8cff;
+  --ring: 0 0 0 3px rgba(124, 140, 255, 0.28);
+  --radius: 12px;
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* Prevent scrolling */
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Poppins", sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Static layout, no scroll */
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  width: 100%;
+  max-width: 1100px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Header & Footer */
+.app-header,
+.app-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255,255,255,0.04);
+  border-radius: var(--radius);
+}
+
+.favicon {
+  width: 28px;
+  height: 28px;
+}
+
+.logo-text {
+  font-family: "Pixelify Sans", "Poppins", sans-serif;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+/* Main content */
+.app-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.page-title {
+  margin-bottom: 16px;
+  font-family: "Pixelify Sans", "Poppins", sans-serif;
+  font-size: 2rem;
+}
+
+/* Form */
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.contact-form label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* Wider email box */
+.contact-form input {
+  width: 400px;
+  max-width: 90%;
+  font: inherit;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+}
+
+/* Much wider message box */
+.contact-form textarea {
+  width: 700px;
+  max-width: 95%;
+  min-height: 200px;
+  font: inherit;
+  padding: 12px 14px;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  resize: none;
+}
+
+/* Longer submit button */
+.contact-form button {
+  width: 400px; /* Matches email field width */
+  max-width: 90%;
+  padding: 12px 20px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--brand);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+.contact-form button:hover {
+  filter: brightness(0.95);
 }
