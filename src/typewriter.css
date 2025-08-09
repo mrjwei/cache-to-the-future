@@ -1,0 +1,47 @@
+.board {
+  width: min(900px, 92vw);
+}
+
+/* Key base style */
+.key {
+  cursor: pointer;
+  transition: transform 0.06s ease, filter 0.12s ease, opacity 0.12s ease;
+}
+
+.key rect {
+  fill: #1b1e24;
+  stroke: #3a3f4b;
+  stroke-width: 2;
+}
+
+/* Key labels */
+.key text {
+  fill: #cfd6e6;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1;
+  pointer-events: none; /* disable pointer on text */
+}
+
+/* Mouse hover effect */
+.key:hover {
+  filter: drop-shadow(0 0 8px rgba(173, 216, 230, 0.7));
+  transform: translateY(-2px);
+}
+
+/* Keyboard hover effect (via class) */
+.is-hovered {
+  filter: drop-shadow(0 0 10px rgba(173, 216, 230, 0.95));
+  transform: translateY(-2px) scale(1.02);
+}
+
+/* Pressed effect */
+.is-active {
+  transform: translateY(1px) scale(0.99);
+  opacity: 0.95;
+}
+
+/* Top surface gradient */
+.key .top {
+  fill: url(#gradTop);
+}

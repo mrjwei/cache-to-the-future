@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
+import Typewriter from "./Typewriter";
 
 /* ========= Crypto helpers (AES-GCM) ========= */
 const enc = new TextEncoder();
@@ -302,6 +303,8 @@ function App() {
             onChange={(e) => setMessage(e.target.value)}
             required
           />
+          
+          <Typewriter />
 
           {/* Flexible Deliver After */}
           <div className="delivery-row delivery-grid">
