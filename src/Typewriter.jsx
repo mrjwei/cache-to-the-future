@@ -1,138 +1,183 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./typewriter.css";
 
-export default function Typewriter() {
+export default function Typewriter({ onVirtualKey }) {
   const svgRef = useRef(null);
 
-  // --- layout config ---
-  const keyW = 70;
-  const keyH = 70;
+  /* ---------- layout ---------- */
+  const keyW = 60;        // square keys → perfect circles with CSS
+  const keyH = 60;
   const gap  = 12;
-  const startX = 40;
-  const startY = 40;
-  const rowIndent = 36; // A-row and Z-row stagger
+  const startX = 36;
+  const startY = 36;
 
-  // QWERTY rows (letters only)
-  const rows = useMemo(
-    () => [
-      ["Q","W","E","R","T","Y","U","I","O","P"], // r=0, indent=0
-      ["A","S","D","F","G","H","J","K","L"],     // r=1, indent=rowIndent
-      ["Z","X","C","V","B","N","M"],             // r=2, indent=rowIndent*2
-    ],
-    []
-  );
+  // per-row horizontal indent (numbers, QZERTY, ASDF, WXCV)
+  const rowIndents = [0, 0, 28, 70];
 
-  // helpers to compute widths/positions
-  const rowWidthPx = (rIndex) => {
-    const len = rows[rIndex].length;
-    const indent = rIndex * rowIndent;
-    return indent + len * keyW + (len - 1) * gap;
+  // how much to push Shift to the right (to avoid overlap with bottom row)
+  const SHIFT_OFFSET = 16; // try 12–24 if you want more/less spacing
+
+  /* ---------- rows ---------- */
+  const rowNums    = ["1","2","3","4","5","6","7","8","9","0"];
+  const rowQZERTY  = ["Q","Z","E","R","T","Y","U","I","O","P"];
+  const rowASDF    = ["A","S","D","F","G","H","J","K","L"];
+  const rowWXCV    = ["W","X","C","V","B","N","M"];
+
+  /* ---------- key geometry ---------- */
+  const makeRow = (letters, rowIndex /* 0..3 */) => {
+    const y = startY + rowIndex * (keyH + gap);
+    const indent = rowIndents[rowIndex];
+    return letters.map((label, i) => {
+      const x = startX + indent + i * (keyW + gap);
+      // KeyboardEvent.code names: digits use Digit1..Digit0, letters use KeyA..KeyZ
+      const code =
+        /[0-9]/.test(label) ? (label === "0" ? "Digit0" : `Digit${label}`) : `Key${label}`;
+      return { label, code, x, y, w: keyW, h: keyH };
+    });
   };
 
-  const topWidth    = rowWidthPx(0);
-  const middleWidth = rowWidthPx(1);
-  const bottomWidth = rowWidthPx(2);
+  const numKeys   = useMemo(() => makeRow(rowNums,   0), []);
+  const qRowKeys  = useMemo(() => makeRow(rowQZERTY, 1), []);
+  const aRowKeys  = useMemo(() => makeRow(rowASDF,   2), []);
+  const wRowKeys  = useMemo(() => makeRow(rowWXCV,   3), []);
+  const letterKeys = [...qRowKeys, ...aRowKeys, ...wRowKeys];
 
-// ENTER key size/pos: sits to the RIGHT of the middle (home) row, spanning middle + bottom
-const enterW = keyW + gap * 2;          // slightly wider than a normal key
-const enterH = keyH * 2 + gap;          // spans two rows (middle & bottom)
-const enterX =
-  startX +
-  // right edge of middle row:
-  (rowIndent * 1) + rows[1].length * keyW + (rows[1].length - 1) * gap +
-  // one gap of separation before the Enter block:
-  gap;
-const enterY = startY + (keyH + gap);   // start at middle row
+  // right edges for layout math
+  const numRight =
+    rowIndents[0] + rowNums.length * keyW + (rowNums.length - 1) * gap;
+  const qRowRight =
+    rowIndents[1] + rowQZERTY.length * keyW + (rowQZERTY.length - 1) * gap;
+  const aRowRight =
+    rowIndents[2] + rowASDF.length * keyW + (rowASDF.length - 1) * gap;
+  const wRowRight =
+    rowIndents[3] + rowWXCV.length * keyW + (rowWXCV.length - 1) * gap;
 
-  // SPACE key size/pos: centered under the whole keyboard
-  const spaceW = keyW * 5 + gap * 4;   // wide bar
-  const spaceH = keyH;
-  // widest content must consider "middle row + Enter" (usually the widest)
-  const contentW = Math.max(topWidth, middleWidth + gap + enterW, bottomWidth);
+  // Backspace: to the right of number row
+  const backW = keyW * 1.4 + gap * 0.4;
+  const backH = keyH;
+  const backX = startX + numRight + gap;
+  const backY = startY + 0 * (keyH + gap);
+
+  // Enter: to the right of ASDF row, spanning ASDF + WXCV rows
+  const enterW = keyW + gap * 2;
+  const enterH = keyH * 2 + gap;
+  const enterX = startX + aRowRight + gap;
+  const enterY = startY + 2 * (keyH + gap); // start at ASDF row (row index 2 overall)
+
+  // Shift: left of WXCV row, nudged to the right by SHIFT_OFFSET
+  const shiftW = keyW * 1.6 + gap * 0.6;
+  const shiftH = keyH;
+  const shiftX = startX + rowIndents[3] - (shiftW + gap) + SHIFT_OFFSET;
+  const shiftY = startY + 3 * (keyH + gap);
+
+  // Space centered under everything
+  const contentW = Math.max(numRight, qRowRight, aRowRight + gap + enterW, wRowRight);
+  const spaceW = keyW * 6 + gap * 5;
+  const spaceH = keyH * 0.8;
   const spaceX = startX + (contentW - spaceW) / 2;
-  const spaceY = startY + 3 * (keyH + gap); // below Z row
+  const spaceY = startY + 4 * (keyH + gap);
 
-  // Precompute letter key rects
-  const letterKeys = useMemo(() => {
-    const out = [];
-    rows.forEach((rowLetters, r) => {
-      const indent = r * rowIndent;
-      const y = startY + r * (keyH + gap);
-      rowLetters.forEach((letter, i) => {
-        const x = startX + indent + i * (keyW + gap);
-        out.push({ label: letter, code: `Key${letter}`, x, y, w: keyW, h: keyH });
-      });
-    });
-    return out;
-  }, [rows]);
-
-  // special keys
   const specialKeys = [
-    { label: "ENTER", code: "Enter", x: enterX, y: enterY, w: enterW, h: enterH },
-    { label: "SPACE", code: "Space", x: spaceX, y: spaceY, w: spaceW, h: spaceH },
+    { label: "BACK",  code: "Backspace", x: backX,  y: backY,  w: backW,  h: backH },
+    { label: "ENTER", code: "Enter",     x: enterX, y: enterY, w: enterW, h: enterH },
+    { label: "SPACE", code: "Space",     x: spaceX, y: spaceY, w: spaceW, h: spaceH },
+    { label: "SHIFT", code: "ShiftLeft", x: shiftX, y: shiftY, w: shiftW, h: shiftH },
   ];
 
-  // final viewBox
-  const vbWidth  = startX * 2 + contentW;
-  const vbHeight = startY * 2 + (3 * keyH) + (2 * gap) + spaceH + gap; // 3 rows + gaps + spacebar
+  /* ---------- Shift latch ---------- */
+  const [shiftLatched, setShiftLatched] = useState(false);
+  const send = (val) => onVirtualKey && onVirtualKey(val);
 
-  // hover/press effects
+  const handleVirtualPress = (code, payload) => {
+    if (!onVirtualKey) return;
+    if (code === "ShiftLeft") { setShiftLatched(true); return; }
+    if (code === "Space")     { send(" "); setShiftLatched(false); return; }
+    if (code === "Enter")     { send("\n"); setShiftLatched(false); return; }
+    if (code === "Backspace") { send("\b"); return; }
+
+    // digits
+    if (/[0-9]/.test(payload)) { send(payload); setShiftLatched(false); return; }
+
+    // letters
+    const ch = shiftLatched ? payload.toUpperCase() : payload.toLowerCase();
+    send(ch);
+    setShiftLatched(false);
+  };
+
+  /* ---------- physical key highlight ---------- */
   useEffect(() => {
     const root = svgRef.current;
     if (!root) return;
+    const keyMap = new Map([...root.querySelectorAll(".key")].map(el => [el.dataset.code, el]));
+    const setHover = (code, on) => keyMap.get(code)?.classList.toggle("is-hovered", on);
+    const setActive = (code, on) => keyMap.get(code)?.classList.toggle("is-active", on);
 
-    const keyMap = new Map(
-      [...root.querySelectorAll(".key")].map((el) => [el.dataset.code, el])
-    );
-    const setHover = (code, on) => {
-      const el = keyMap.get(code);
-      if (el) el.classList.toggle("is-hovered", on);
+    const down = (e) => {
+      if (!e.repeat) {
+        setHover(e.code, true);
+        setActive(e.code, true);
+        if (e.code === "ShiftLeft" || e.code === "ShiftRight") setShiftLatched(true);
+      }
     };
-    const setActive = (code, on) => {
-      const el = keyMap.get(code);
-      if (el) el.classList.toggle("is-active", on);
+    const up = (e) => {
+      setActive(e.code, false);
+      setTimeout(() => setHover(e.code, false), 70);
+      if (e.code !== "ShiftLeft" && e.code !== "ShiftRight") setShiftLatched(false);
     };
-    const onDown = (e) => { if (!e.repeat) { setHover(e.code, true); setActive(e.code, true); } };
-    const onUp   = (e) => { setActive(e.code, false); setTimeout(() => setHover(e.code, false), 70); };
 
-    window.addEventListener("keydown", onDown);
-    window.addEventListener("keyup", onUp);
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
     return () => {
-      window.removeEventListener("keydown", onDown);
-      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
     };
   }, []);
 
+  /* ---------- viewBox ---------- */
+  const vbWidth  = startX * 2 + contentW + backW + gap;
+  const vbHeight = startY * 2 + (5 * keyH) + (4 * gap) + spaceH; // 4 rows + space
+
+  /* ---------- render ---------- */
   return (
     <svg
       ref={svgRef}
-      className="board"
+      className={`board ${shiftLatched ? "shift-on" : ""}`}
       viewBox={`0 0 ${vbWidth} ${vbHeight}`}
       role="img"
-      aria-label="Typewriter Keyboard"
+      aria-label="Typewriter with numbers, Shift latch, Backspace"
     >
-      <defs>
-        <linearGradient id="gradTop" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#232833" />
-          <stop offset="100%" stopColor="#1b1e24" />
-        </linearGradient>
-      </defs>
-
-      {/* letters */}
-      {letterKeys.map(({ label, code, x, y, w, h }) => (
-        <g className="key" data-code={code} key={code}>
-          <rect x={x} y={y} width={w} height={h} className="top" rx="10" ry="10" />
-          <rect x={x} y={y} width={w} height={h} fill="none" rx="10" ry="10" />
-          <text x={x + w / 2} y={y + h / 2 + 5} textAnchor="middle">{label}</text>
+      {/* number row */}
+      {numKeys.map(({ label, code, x, y, w, h }) => (
+        <g className="key" data-code={code} key={code}
+           onMouseDown={() => handleVirtualPress(code, label)}>
+          <rect x={x} y={y} width={w} height={h} className="top" rx="50%" ry="50%" />
+          <rect x={x} y={y} width={w} height={h} fill="none" rx="50%" ry="50%" />
+          <text x={x + w / 2} y={y + h / 2 + 6} textAnchor="middle">{label}</text>
         </g>
       ))}
 
-      {/* enter + space */}
+      {/* letters (QZERTY / ASDF / WXCV) */}
+      {letterKeys.map(({ label, code, x, y, w, h }) => (
+        <g className="key" data-code={code} key={code}
+           onMouseDown={() => handleVirtualPress(code, label)}>
+          <rect x={x} y={y} width={w} height={h} className="top" rx="50%" ry="50%" />
+          <rect x={x} y={y} width={w} height={h} fill="none" rx="50%" ry="50%" />
+          <text x={x + w / 2} y={y + h / 2 + 6} textAnchor="middle">
+            {shiftLatched ? label.toUpperCase() : label.toLowerCase()}
+          </text>
+        </g>
+      ))}
+
+      {/* Backspace / Enter / Space / Shift */}
       {specialKeys.map(({ label, code, x, y, w, h }) => (
-        <g className="key" data-code={code} key={code}>
-          <rect x={x} y={y} width={w} height={h} className="top" rx="12" ry="12" />
-          <rect x={x} y={y} width={w} height={h} fill="none" rx="12" ry="12" />
-          <text x={x + w / 2} y={y + h / 2 + 5} textAnchor="middle">{label}</text>
+        <g className={`key ${code === "ShiftLeft" && shiftLatched ? "is-hovered" : ""}`}
+           data-code={code} key={code}
+           onMouseDown={() => handleVirtualPress(code)}>
+          <rect x={x} y={y} width={w} height={h} className="top" rx="14" ry="14" />
+          <rect x={x} y={y} width={w} height={h} fill="none" rx="14" ry="14" />
+          <text x={x + w / 2} y={y + h / 2 + 6} textAnchor="middle">
+            {code === "Backspace" ? "←" : label}
+          </text>
         </g>
       ))}
     </svg>
