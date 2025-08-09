@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Poppins:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
 :root {
   --bg: #0f1221;
@@ -51,10 +51,7 @@ body {
   border-radius: var(--radius);
 }
 
-.favicon {
-  width: 28px;
-  height: 28px;
-}
+.favicon { width: 28px; height: 28px; }
 
 .logo-text {
   font-family: "Pixelify Sans", "Poppins", sans-serif;
@@ -89,19 +86,7 @@ body {
   color: var(--muted);
 }
 
-/* Wider email box */
-.contact-form input {
-  width: 400px;
-  max-width: 90%;
-  font: inherit;
-  padding: 12px 14px;
-  border: 1px solid rgba(255,255,255,0.2);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-}
-
-/* Much wider message box */
+/* Message box (wide) */
 .contact-form textarea {
   width: 700px;
   max-width: 95%;
@@ -115,20 +100,207 @@ body {
   resize: none;
 }
 
-/* Longer submit button */
-.contact-form button {
-  width: 400px; /* Matches email field width */
-  max-width: 90%;
+/* Deliver after row (grid of Y/D/H/M) */
+.delivery-row {
+  width: 700px;
+  max-width: 95%;
+  background: rgba(255,255,255,0.04);
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+}
+
+/* four short inputs now */
+.delivery-grid {
+  display: grid;
+  align-items: center;
+  grid-template-columns: 150px repeat(4, auto);
+  gap: 12px;
+}
+
+.delivery-label { color: var(--muted); }
+
+.num-field {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+}
+
+.num-field label {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.num-field input {
+  width: 80px; /* shorter, fixed width */
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+  outline: none;
+}
+.num-field input:focus { box-shadow: var(--ring); border-color: var(--brand); }
+
+/* Audio row + submit on same line */
+.audio-row {
+  width: 700px;
+  max-width: 95%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: nowrap; /* keep submit on the same line */
+}
+
+/* Audio controls (left side) */
+.audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.audio-hint {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.audio-error {
+  color: #ff9b9b;
+  font-size: 0.95rem;
+}
+
+.audio-preview {
+  width: 700px;
+  max-width: 95%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255,255,255,0.04);
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+audio { width: 100%; }
+
+/* Buttons */
+.btn {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 600;
+}
+.btn:hover { filter: brightness(0.95); }
+
+.btn.record {
+  background: rgba(255, 54, 54, 0.18);
+  border-color: rgba(255, 54, 54, 0.32);
+}
+.btn.stop {
+  background: rgba(255,156, 54, 0.18);
+  border-color: rgba(255,156, 54, 0.32);
+}
+.btn.file {
+  background: rgba(124, 140, 255, 0.2);
+  border-color: rgba(124, 140, 255, 0.32);
+}
+.btn.ghost { background: transparent; }
+
+/* Submit button aligned right */
+.submit-wide {
+  flex-shrink: 0;
+  width: 240px;              /* long, but fits beside controls */
   padding: 12px 20px;
   border: none;
   border-radius: var(--radius);
-  background: var(--brand);
+  background: linear-gradient(180deg, var(--brand), #5f6ff3);
   color: white;
-  font-weight: bold;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
   cursor: pointer;
-  text-align: center;
+}
+.submit-wide:hover { filter: brightness(0.97); }
+
+/* Hints */
+.key-hint {
+  width: 700px;
+  max-width: 95%;
+  font-size: 0.9rem;
+  color: var(--muted);
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 10px 12px;
+  border-radius: 10px;
+  overflow-wrap: anywhere;
 }
 
-.contact-form button:hover {
-  filter: brightness(0.95);
+/* Decrypt & schedules */
+.decrypt-card {
+  width: 700px;
+  max-width: 95%;
+  margin-top: 12px;
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 12px;
 }
+.section-title {
+  margin: 0 0 8px 0;
+  font-family: "Pixelify Sans", "Poppins", sans-serif;
+  font-size: 1.3rem;
+}
+.decrypt-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.key-input {
+  flex: 1;
+  min-width: 240px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font: inherit;
+}
+
+.decrypt-output {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+.msg-pre {
+  white-space: pre-wrap;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px;
+  margin: 0;
+}
+
+.sched-list { display: grid; gap: 10px; }
+.sched-item {
+  display: grid;
+  gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 10px;
+}
+.sched-meta { color: var(--muted); }
+.sched-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.countdown { font-weight: 600; }
+.key-line { display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+.muted { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
