@@ -33,16 +33,16 @@ export default function Typewriter() {
   const middleWidth = rowWidthPx(1);
   const bottomWidth = rowWidthPx(2);
 
-  // ENTER key size/pos: sits to the RIGHT of the middle (home) row, spanning two rows
-  const enterW = keyW + gap * 2;       // slightly wider than a normal key
-  const enterH = keyH * 2 + gap;       // spans two rows (top & middle)
-  const enterX =
-    startX +
-    // right edge of middle row:
-    (rowIndent * 1) + rows[1].length * keyW + (rows[1].length - 1) * gap +
-    // one gap of separation before the Enter block:
-    gap;
-  const enterY = startY;
+// ENTER key size/pos: sits to the RIGHT of the middle (home) row, spanning middle + bottom
+const enterW = keyW + gap * 2;          // slightly wider than a normal key
+const enterH = keyH * 2 + gap;          // spans two rows (middle & bottom)
+const enterX =
+  startX +
+  // right edge of middle row:
+  (rowIndent * 1) + rows[1].length * keyW + (rows[1].length - 1) * gap +
+  // one gap of separation before the Enter block:
+  gap;
+const enterY = startY + (keyH + gap);   // start at middle row
 
   // SPACE key size/pos: centered under the whole keyboard
   const spaceW = keyW * 5 + gap * 4;   // wide bar
