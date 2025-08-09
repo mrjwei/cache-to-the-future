@@ -40,7 +40,7 @@ async function decryptJson(key, obj) {
 }
 
 /* ========= Local schedule store ========= */
-const LS_KEY = "tc_schedules_v1"; // [{id, deliverAtISO, keyB64, fileName, descKey?, revealedAt}]
+const LS_KEY = "tc_schedules_v1"; // [{id, deliverAtISO, keyB64, fileName, descKey?, ownerName?, ownerBirthday?, revealedAt}]
 const loadSchedules = () => {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
 };
@@ -62,7 +62,7 @@ function App() {
   const [recordingError, setRecordingError] = useState("");
   const [elapsed, setElapsed] = useState(0);
 
-  // Last-created info
+  // Last-created info (optional testing panel)
   const [lastKeyB64, setLastKeyB64] = useState("");
   const [lastDownloadName, setLastDownloadName] = useState("");
 
@@ -85,9 +85,18 @@ function App() {
   // Textarea ref
   const textareaRef = useRef(null);
 
-  // --- creator info ---
+  // Creator info
   const [creatorName, setCreatorName] = useState("");
   const [birthday, setBirthday] = useState(""); // YYYY-MM-DD
+
+  // Search gate for schedules
+  const [searchName, setSearchName] = useState("");
+  const [searchBirthday, setSearchBirthday] = useState("");
+
+  const normalize = (s) => (s || "").trim().toLowerCase();
+  const matchesUser = (sch, n, b) =>
+    normalize(sch.ownerName) === normalize(n) &&
+    normalize(sch.ownerBirthday) === normalize(b);
 
   function generateDescKey() {
     const ALPH = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -178,7 +187,7 @@ function App() {
   // persist schedules
   useEffect(() => { saveSchedules(schedules); }, [schedules]);
 
-  /* ======= On-screen + physical typing helpers ======= */
+  /* ======= Typing helpers ======= */
   const insertAtCursor = (val) => {
     const ta = textareaRef.current;
     if (!ta) {
@@ -288,7 +297,7 @@ function App() {
       const keyB64 = await exportKeyB64(key);
       const encObj = await encryptJson(key, bundle);
 
-      // description key + file name
+      // desc key + file name
       const descKey = generateDescKey();
       const safeName = sanitize(creatorName);
       const safeBday = sanitize(birthday);
@@ -304,15 +313,24 @@ function App() {
       setLastKeyB64(keyB64);
       setLastDownloadName(fileName);
 
-      // schedule (stores keys for reveal)
-      const deliverAt = new Date(Date.now() + ms).toISOString();
+      // schedule (store owner info for search-gate)
+      const deliverAtISO = new Date(Date.now() + ms).toISOString();
       const id = `tc_${Date.now()}`;
       setSchedules((prev) => [
         ...prev,
-        { id, deliverAtISO: deliverAt, keyB64, fileName, descKey, revealedAt: null }
+        {
+          id,
+          deliverAtISO,
+          keyB64,
+          fileName,
+          descKey,
+          ownerName: creatorName,
+          ownerBirthday: birthday,
+          revealedAt: null
+        }
       ]);
 
-      alert("Encrypted & downloaded. The key and description key will appear below when the timer hits zero.");
+      alert("Encrypted & downloaded. The key and description key will appear when the timer hits zero.");
 
       setMessage("");
       setAudioBlob(null);
@@ -407,7 +425,7 @@ function App() {
 
           <label htmlFor="message">Your message</label>
 
-          {/* On-screen keyboard (wrapped so it never clips) */}
+          {/* Keyboard */}
           <div className="typewriter-wrapper">
             <Typewriter onVirtualKey={handleVirtualKey} />
           </div>
@@ -421,7 +439,7 @@ function App() {
             required
           />
 
-          {/* Handy jump button for long pages */}
+          {/* Jump link for long pages */}
           <button
             type="button"
             className="btn ghost"
@@ -537,26 +555,42 @@ function App() {
           )}
         </form>
 
-        {/* Local schedules (key reveal area) */}
-        {schedules.length > 0 && (
-          <section className="decrypt-card">
-            <h2 className="section-title">Scheduled keys</h2>
-            <div className="sched-list">
-              {schedules.map((s) => {
+        {/* Search-gated schedules */}
+        <section className="decrypt-card">
+          <h2 className="section-title">Find your scheduled capsule</h2>
+
+          <div className="decrypt-row" style={{ marginBottom: 12 }}>
+            <input
+              type="text"
+              placeholder="Your name (e.g., Hana Tanaka)"
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              style={{ flex: "1 1 220px" }}
+            />
+            <input
+              type="date"
+              value={searchBirthday}
+              onChange={(e) => setSearchBirthday(e.target.value)}
+              style={{ flex: "0 0 180px" }}
+            />
+          </div>
+
+          <div className="sched-list">
+            {schedules
+              .filter((s) => searchName && searchBirthday && matchesUser(s, searchName, searchBirthday))
+              .map((s) => {
                 const s2 = revealIfDue(s);
                 const due = Date.now() >= new Date(s2.deliverAtISO).getTime();
                 return (
                   <div key={s2.id} className="sched-item">
                     <div className="sched-meta">
-                      <div><strong>File:</strong> {s2.fileName}</div>
-                      <div><strong>Owner:</strong> {s2.fileName?.match(/^CTTF-([^_]+)/)?.[1] || "—"}</div>
-                      <div><strong>Birthday:</strong> {s2.fileName?.match(/^CTTF-[^_]+_([^_]+)/)?.[1] || "—"}</div>
+                      <div><strong>Owner:</strong> {s2.ownerName || "—"}</div>
+                      <div><strong>Birthday:</strong> {s2.ownerBirthday || "—"}</div>
                       <div><strong>Unlocks at:</strong> {new Date(s2.deliverAtISO).toLocaleString()}</div>
+                      <div><strong>File:</strong> {s2.fileName}</div>
                     </div>
+
                     <div className="sched-controls">
-                      {!due && !s2.revealedAt && (
-                        <div className="countdown">Opens in: {fmtCountdown(s2.deliverAtISO)}</div>
-                      )}
                       {(due || s2.revealedAt) ? (
                         <>
                           <div className="key-line">
@@ -583,23 +617,19 @@ function App() {
                           )}
                         </>
                       ) : (
-                        <button
-                          type="button"
-                          className="btn ghost"
-                          onClick={() => {
-                            const updated = schedules.map((x) =>
-                              x.id === s2.id ? { ...x, revealedAt: new Date().toISOString() } : x
-                            );
-                            setSchedules(updated);
-                          }}
-                        >
-                          Reveal now (test)
-                        </button>
+                        <div className="muted">Keys hidden until unlock time.</div>
                       )}
+
+                      {/* Always-visible countdown */}
+                      <div className="countdown subtle" style={{ marginTop: 6 }}>
+                        {due ? "Unlocked" : `Opens in: ${fmtCountdown(s2.deliverAtISO)}`}
+                      </div>
+
                       <button
                         type="button"
                         className="btn ghost"
                         onClick={() => setSchedules(schedules.filter((x) => x.id !== s2.id))}
+                        style={{ marginTop: 8 }}
                       >
                         Remove
                       </button>
@@ -607,12 +637,17 @@ function App() {
                   </div>
                 );
               })}
-            </div>
-            <p className="muted">
-              Note: schedules are stored in <code>localStorage</code> and only reveal on this device/browser.
-            </p>
-          </section>
-        )}
+
+            {/* Empty states */}
+            {(!searchName || !searchBirthday) && (
+              <div className="muted">Enter your name and birthday to find your capsule.</div>
+            )}
+            {searchName && searchBirthday &&
+              schedules.filter((s) => matchesUser(s, searchName, searchBirthday)).length === 0 && (
+                <div className="muted">No capsule found for that name & birthday.</div>
+              )}
+          </div>
+        </section>
 
         {/* Decrypt section */}
         <section id="decrypt" className="decrypt-card">

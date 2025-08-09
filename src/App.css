@@ -15,22 +15,17 @@ html, body {
   flex-direction: column;
 }
 
+/* center horizontally, start near top, scroll if long */
 .app-main {
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   padding: 20px;
   max-width: 800px;
   margin: 0 auto;
-  min-height: calc(100vh - 100px); /* header+footer space */
-}
-
-@media (max-height: 700px) {
-  .app-main {
-    justify-content: flex-start;
-  }
+  overflow: visible;
 }
 
 .page-title {
@@ -61,6 +56,7 @@ html, body {
 
 /* === Forms === */
 .contact-form {
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -100,12 +96,13 @@ html, body {
 
 .delivery-grid {
   flex-wrap: wrap;
+  row-gap: 8px;
 }
 
 .num-field {
   display: flex;
   flex-direction: column;
-  width: 80px;
+  width: 120px;
 }
 
 .num-field input {
@@ -199,9 +196,10 @@ html, body {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-top: 4px;
 }
 
-/* === Schedules === */
+/* === Schedules (finder) === */
 .decrypt-card {
   background: #161b22;
   padding: 16px;
@@ -227,18 +225,26 @@ html, body {
 }
 
 .sched-meta {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  row-gap: 4px;
 }
 
 .countdown {
   font-family: monospace;
 }
+.countdown.subtle {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: #8b949e;
+}
 
 .muted {
   color: #8b949e;
-  font-size: 0.8rem;
-  margin-top: 8px;
+  font-size: 0.9rem;
+  margin-top: 4px;
 }
 
 /* === Decrypt Section === */
