@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
-import Typewriter from "./Typewriter"; // ← added
+import Typewriter from "./Typewriter";
 
 /* ========= Crypto helpers (AES-GCM) ========= */
 const enc = new TextEncoder();
@@ -40,7 +40,7 @@ async function decryptJson(key, obj) {
 }
 
 /* ========= Local schedule store ========= */
-const LS_KEY = "tc_schedules_v1"; // [{id, deliverAtISO, keyB64, fileName, revealedAt}]
+const LS_KEY = "tc_schedules_v1"; // [{id, deliverAtISO, keyB64, fileName, descKey?, revealedAt}]
 const loadSchedules = () => {
   try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
 };
@@ -82,8 +82,22 @@ function App() {
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
 
-  // Textarea ref (NEW)
+  // Textarea ref
   const textareaRef = useRef(null);
+
+  // --- creator info ---
+  const [creatorName, setCreatorName] = useState("");
+  const [birthday, setBirthday] = useState(""); // YYYY-MM-DD
+
+  function generateDescKey() {
+    const ALPH = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+    const pick = () => ALPH[Math.floor(Math.random() * ALPH.length)];
+    const s = Array.from({ length: 6 }, pick).join("");
+    return `${s.slice(0, 3)}-${s.slice(3)}`;
+  }
+  function sanitize(s) {
+    return (s || "").trim().replace(/\s+/g, "-").replace(/[^a-z0-9\-_.]/gi, "");
+  }
 
   /* ======= Audio Recording ======= */
   const chooseMimeType = () => {
@@ -164,16 +178,13 @@ function App() {
   // persist schedules
   useEffect(() => { saveSchedules(schedules); }, [schedules]);
 
-  /* ======= On-screen + physical typing helpers (NEW) ======= */
-
-  // Insert at caret (handles selection and backspace) and keep caret updated
+  /* ======= On-screen + physical typing helpers ======= */
   const insertAtCursor = (val) => {
     const ta = textareaRef.current;
     if (!ta) {
       setMessage((s) => (val === "\b" ? s.slice(0, -1) : s + val));
       return;
     }
-
     const start = ta.selectionStart ?? message.length;
     const end = ta.selectionEnd ?? message.length;
 
@@ -201,10 +212,8 @@ function App() {
     });
   };
 
-  // For the on-screen Typewriter
   const handleVirtualKey = (val) => insertAtCursor(val);
 
-  // Physical keyboard input when textarea is NOT focused
   useEffect(() => {
     const isEditable = (el) => {
       if (!el) return false;
@@ -213,7 +222,7 @@ function App() {
     };
 
     const onKeyDown = (e) => {
-      if (isEditable(document.activeElement)) return; // let browser handle it
+      if (isEditable(document.activeElement)) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       if (e.key === "Backspace") { e.preventDefault(); insertAtCursor("\b"); return; }
@@ -228,7 +237,7 @@ function App() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []); // run once
+  }, []);
 
   /* ======= Handlers ======= */
   const onUploadAudioFile = (e) => {
@@ -257,12 +266,19 @@ function App() {
         alert("Please enter a delay greater than zero (years/days/hours/minutes).");
         return;
       }
+      if (!creatorName || !birthday) {
+        alert("Please enter your name and birthday.");
+        return;
+      }
 
       // bundle to encrypt
       let audioB64 = null;
       if (audioBlob) audioB64 = await blobToBase64(audioBlob);
       const bundle = {
+        v: 1,
         createdAt: new Date().toISOString(),
+        name: creatorName,
+        birthday, // YYYY-MM-DD
         message,
         audio: audioB64 ? { mime: audioBlob.type || "application/octet-stream", b64: audioB64 } : null,
       };
@@ -272,8 +288,13 @@ function App() {
       const keyB64 = await exportKeyB64(key);
       const encObj = await encryptJson(key, bundle);
 
-      // download .enc.json
-      const fileName = `timecapsule-${Date.now()}.enc.json`;
+      // description key + file name
+      const descKey = generateDescKey();
+      const safeName = sanitize(creatorName);
+      const safeBday = sanitize(birthday);
+      const fileName = `CTTF-${safeName}_${safeBday}_${Date.now()}.enc.json`;
+
+      // download
       const fileBlob = new Blob([JSON.stringify(encObj, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(fileBlob);
       const a = document.createElement("a");
@@ -283,19 +304,20 @@ function App() {
       setLastKeyB64(keyB64);
       setLastDownloadName(fileName);
 
-      // locally schedule reveal
+      // schedule (stores keys for reveal)
       const deliverAt = new Date(Date.now() + ms).toISOString();
       const id = `tc_${Date.now()}`;
-      setSchedules((prev) => [...prev, { id, deliverAtISO: deliverAt, keyB64, fileName, revealedAt: null }]);
+      setSchedules((prev) => [
+        ...prev,
+        { id, deliverAtISO: deliverAt, keyB64, fileName, descKey, revealedAt: null }
+      ]);
 
-      alert("Encrypted & downloaded. The key will appear below when the timer hits zero.");
+      alert("Encrypted & downloaded. The key and description key will appear below when the timer hits zero.");
 
-      // reset message + audio
       setMessage("");
       setAudioBlob(null);
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       setAudioUrl(""); setElapsed(0);
-      // keep the entered Y/D/H/M
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Check console.");
@@ -363,19 +385,51 @@ function App() {
         <h1 className="page-title">Enter your message!</h1>
 
         <form className="contact-form" onSubmit={handleSubmit}>
+          {/* Name & Birthday */}
+          <label htmlFor="creatorName">Your name</label>
+          <input
+            id="creatorName"
+            type="text"
+            placeholder="e.g., Hana Tanaka"
+            value={creatorName}
+            onChange={(e) => setCreatorName(e.target.value)}
+            required
+          />
+
+          <label htmlFor="birthday">Birthday</label>
+          <input
+            id="birthday"
+            type="date"
+            value={birthday}
+            onChange={(e) => setBirthday(e.target.value)}
+            required
+          />
+
           <label htmlFor="message">Your message</label>
 
-          {/* On-screen keyboard (now writes to the field instantly) */}
-          <Typewriter onVirtualKey={handleVirtualKey} />
-          
+          {/* On-screen keyboard (wrapped so it never clips) */}
+          <div className="typewriter-wrapper">
+            <Typewriter onVirtualKey={handleVirtualKey} />
+          </div>
+
           <textarea
             id="message"
-            ref={textareaRef} /* ← added */
+            ref={textareaRef}
             placeholder="Write your thoughts here…"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             required
           />
+
+          {/* Handy jump button for long pages */}
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => document.getElementById("decrypt")?.scrollIntoView({ behavior: "smooth" })}
+            style={{ alignSelf: "flex-start", marginTop: "8px" }}
+          >
+            ↓ Scroll to Decrypt
+          </button>
 
           {/* Flexible Deliver After */}
           <div className="delivery-row delivery-grid">
@@ -495,6 +549,8 @@ function App() {
                   <div key={s2.id} className="sched-item">
                     <div className="sched-meta">
                       <div><strong>File:</strong> {s2.fileName}</div>
+                      <div><strong>Owner:</strong> {s2.fileName?.match(/^CTTF-([^_]+)/)?.[1] || "—"}</div>
+                      <div><strong>Birthday:</strong> {s2.fileName?.match(/^CTTF-[^_]+_([^_]+)/)?.[1] || "—"}</div>
                       <div><strong>Unlocks at:</strong> {new Date(s2.deliverAtISO).toLocaleString()}</div>
                     </div>
                     <div className="sched-controls">
@@ -502,22 +558,35 @@ function App() {
                         <div className="countdown">Opens in: {fmtCountdown(s2.deliverAtISO)}</div>
                       )}
                       {(due || s2.revealedAt) ? (
-                        <div className="key-line">
-                          <strong>Key:</strong> <code>{s2.keyB64}</code>
-                          <button
-                            className="btn"
-                            type="button"
-                            onClick={() => navigator.clipboard.writeText(s2.keyB64)}
-                          >
-                            Copy
-                          </button>
-                        </div>
+                        <>
+                          <div className="key-line">
+                            <strong>Key:</strong> <code>{s2.keyB64}</code>
+                            <button
+                              className="btn"
+                              type="button"
+                              onClick={() => navigator.clipboard.writeText(s2.keyB64)}
+                            >
+                              Copy
+                            </button>
+                          </div>
+                          {s2.descKey && (
+                            <div className="key-line">
+                              <strong>Description key:</strong> <code>{s2.descKey}</code>
+                              <button
+                                className="btn"
+                                type="button"
+                                onClick={() => navigator.clipboard.writeText(s2.descKey)}
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <button
                           type="button"
                           className="btn ghost"
                           onClick={() => {
-                            // manual override for testing
                             const updated = schedules.map((x) =>
                               x.id === s2.id ? { ...x, revealedAt: new Date().toISOString() } : x
                             );
@@ -546,7 +615,7 @@ function App() {
         )}
 
         {/* Decrypt section */}
-        <section className="decrypt-card">
+        <section id="decrypt" className="decrypt-card">
           <h2 className="section-title">Decrypt your time capsule</h2>
           <div className="decrypt-row">
             <label className="btn file">
