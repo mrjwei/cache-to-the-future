@@ -1,17 +1,282 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
 
+/* ========= Crypto helpers (AES-GCM) ========= */
+const enc = new TextEncoder();
+const dec = new TextDecoder();
+
+const toBase64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const fromBase64 = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(fr.result.split(",")[1]);
+    fr.onerror = reject;
+    fr.readAsDataURL(blob);
+  });
+
+async function generateAesKey() {
+  return crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+}
+async function exportKeyB64(key) {
+  const raw = await crypto.subtle.exportKey("raw", key);
+  return toBase64(raw);
+}
+async function importKeyB64(b64) {
+  return crypto.subtle.importKey("raw", fromBase64(b64), { name: "AES-GCM" }, false, ["encrypt", "decrypt"]);
+}
+async function encryptJson(key, obj) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const pt = enc.encode(JSON.stringify(obj));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, pt);
+  return { iv: toBase64(iv), ciphertext: toBase64(ct), alg: "AES-GCM", v: 1 };
+}
+async function decryptJson(key, obj) {
+  const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64(obj.iv) }, key, fromBase64(obj.ciphertext));
+  return JSON.parse(dec.decode(pt));
+}
+
+/* ========= Local schedule store ========= */
+const LS_KEY = "tc_schedules_v1"; // [{id, deliverAtISO, keyB64, fileName, revealedAt}]
+const loadSchedules = () => {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); } catch { return []; }
+};
+const saveSchedules = (arr) => localStorage.setItem(LS_KEY, JSON.stringify(arr));
+
 function App() {
-  const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
 
-  const handleSubmit = (e) => {
+  // Flexible delay parts
+  const [years, setYears] = useState(0);
+  const [days, setDays] = useState(0);
+  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(0);
+
+  // Audio
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState("");
+  const [recordingError, setRecordingError] = useState("");
+  const [elapsed, setElapsed] = useState(0);
+
+  // Last-created info
+  const [lastKeyB64, setLastKeyB64] = useState("");
+  const [lastDownloadName, setLastDownloadName] = useState("");
+
+  // Decrypt UI
+  const [decFile, setDecFile] = useState(null);
+  const [decKeyB64, setDecKeyB64] = useState("");
+  const [decResult, setDecResult] = useState(null);
+  const [decError, setDecError] = useState("");
+
+  // Local schedules list
+  const [schedules, setSchedules] = useState(loadSchedules());
+  const [nowTick, setNowTick] = useState(Date.now());
+
+  // MediaRecorder refs
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
+
+  /* ======= Audio Recording ======= */
+  const chooseMimeType = () => {
+    const types = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+      "audio/ogg;codecs=opus",
+    ];
+    for (const t of types) {
+      if (window.MediaRecorder && MediaRecorder.isTypeSupported(t)) return t;
+    }
+    return "";
+  };
+
+  const startRecording = async () => {
+    try {
+      setRecordingError(""); setElapsed(0);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const mimeType = chooseMimeType();
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = mr;
+      chunksRef.current = [];
+      mr.ondataavailable = (e) => e.data?.size && chunksRef.current.push(e.data);
+      mr.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
+        setAudioBlob(blob);
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        setAudioUrl(URL.createObjectURL(blob));
+        stopTimer(); stopStream();
+      };
+      mr.start(); setIsRecording(true); startTimer();
+    } catch (err) {
+      console.error(err);
+      setRecordingError("Microphone permission denied or unavailable.");
+      stopStream(); setIsRecording(false);
+    }
+  };
+
+  const stopStream = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+  };
+
+  const stopRecording = () => {
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") mr.stop();
+    else { stopStream(); stopTimer(); }
+    setIsRecording(false);
+  };
+
+  const startTimer = () => {
+    stopTimer(); timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+  };
+  const stopTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = null;
+  };
+
+  /* ======= Effects ======= */
+  useEffect(() => {
+    return () => {
+      stopTimer(); stopStream();
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // heartbeat for countdown display
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  // persist schedules
+  useEffect(() => { saveSchedules(schedules); }, [schedules]);
+
+  /* ======= Handlers ======= */
+  const onUploadAudioFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAudioBlob(file);
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    setAudioUrl(URL.createObjectURL(file));
+  };
+
+  const totalDelayMs = () => {
+    const y = Math.max(0, Number.isFinite(+years) ? +years : 0);
+    const d = Math.max(0, Number.isFinite(+days) ? +days : 0);
+    const h = Math.max(0, Number.isFinite(+hours) ? +hours : 0);
+    const m = Math.max(0, Number.isFinite(+minutes) ? +minutes : 0);
+    const MIN = 60 * 1000;
+    const H = 60 * MIN, D = 24 * H, Y = 365 * D; // simple approximations
+    return y * Y + d * D + h * H + m * MIN;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log({ email, message });
-    alert("Submitted! Check console for data.");
-    setEmail("");
-    setMessage("");
+    try {
+      const ms = totalDelayMs();
+      if (ms <= 0) {
+        alert("Please enter a delay greater than zero (years/days/hours/minutes).");
+        return;
+      }
+
+      // bundle to encrypt
+      let audioB64 = null;
+      if (audioBlob) audioB64 = await blobToBase64(audioBlob);
+      const bundle = {
+        createdAt: new Date().toISOString(),
+        message,
+        audio: audioB64 ? { mime: audioBlob.type || "application/octet-stream", b64: audioB64 } : null,
+      };
+
+      // key + encrypt
+      const key = await generateAesKey();
+      const keyB64 = await exportKeyB64(key);
+      const encObj = await encryptJson(key, bundle);
+
+      // download .enc.json
+      const fileName = `timecapsule-${Date.now()}.enc.json`;
+      const fileBlob = new Blob([JSON.stringify(encObj, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(fileBlob);
+      const a = document.createElement("a");
+      a.href = url; a.download = fileName; a.click();
+      URL.revokeObjectURL(url);
+
+      setLastKeyB64(keyB64);
+      setLastDownloadName(fileName);
+
+      // locally schedule reveal
+      const deliverAt = new Date(Date.now() + ms).toISOString();
+      const id = `tc_${Date.now()}`;
+      setSchedules((prev) => [...prev, { id, deliverAtISO: deliverAt, keyB64, fileName, revealedAt: null }]);
+
+      alert("Encrypted & downloaded. The key will appear below when the timer hits zero.");
+
+      // reset message + audio
+      setMessage("");
+      setAudioBlob(null);
+      if (audioUrl) URL.revokeObjectURL(audioUrl);
+      setAudioUrl(""); setElapsed(0);
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong. Check console.");
+    }
+  };
+
+  const handleDecFile = (e) => {
+    const f = e.target.files?.[0];
+    setDecResult(null); setDecError("");
+    if (!f) return;
+    setDecFile(f);
+  };
+
+  const handleDecrypt = async () => {
+    setDecResult(null); setDecError("");
+    try {
+      if (!decFile || !decKeyB64) {
+        setDecError("Please provide both the encrypted file and the key.");
+        return;
+      }
+      const text = await decFile.text();
+      const encObj = JSON.parse(text);
+      const key = await importKeyB64(decKeyB64.trim());
+      const result = await decryptJson(key, encObj);
+      setDecResult(result);
+    } catch (err) {
+      console.error(err);
+      setDecError("Decryption failed. Check your key and file.");
+    }
+  };
+
+  /* ======= UI helpers ======= */
+  const mmss = (s) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+  const fmtCountdown = (iso) => {
+    const t = Math.max(0, Math.floor((new Date(iso).getTime() - nowTick) / 1000));
+    const d = Math.floor(t / 86400);
+    const h = Math.floor((t % 86400) / 3600);
+    const m = Math.floor((t % 3600) / 60);
+    const s = t % 60;
+    return `${d}d ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
+
+  const revealIfDue = (sch) => {
+    const due = Date.now() >= new Date(sch.deliverAtISO).getTime();
+    if (due && !sch.revealedAt) {
+      const updated = schedules.map((x) => (x.id === sch.id ? { ...x, revealedAt: new Date().toISOString() } : x));
+      setSchedules(updated);
+      return { ...sch, revealedAt: new Date().toISOString() };
+    }
+    return sch;
   };
 
   return (
@@ -25,17 +290,8 @@ function App() {
       {/* Main */}
       <main className="app-main">
         <h1 className="page-title">Enter your message!</h1>
-        <form className="contact-form" onSubmit={handleSubmit}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
 
+        <form className="contact-form" onSubmit={handleSubmit}>
           <label htmlFor="message">Your message</label>
           <textarea
             id="message"
@@ -45,8 +301,208 @@ function App() {
             required
           />
 
-          <button type="submit">Submit</button>
+          {/* Flexible Deliver After */}
+          <div className="delivery-row delivery-grid">
+            <span className="delivery-label">Deliver after</span>
+
+            <div className="num-field">
+              <label htmlFor="years">Years</label>
+              <input
+                id="years"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={years}
+                onChange={(e) => setYears(+e.target.value)}
+              />
+            </div>
+
+            <div className="num-field">
+              <label htmlFor="days">Days</label>
+              <input
+                id="days"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={days}
+                onChange={(e) => setDays(+e.target.value)}
+              />
+            </div>
+
+            <div className="num-field">
+              <label htmlFor="hours">Hours</label>
+              <input
+                id="hours"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={hours}
+                onChange={(e) => setHours(+e.target.value)}
+              />
+            </div>
+
+            <div className="num-field">
+              <label htmlFor="minutes">Minutes</label>
+              <input
+                id="minutes"
+                type="number"
+                min="0"
+                step="1"
+                inputMode="numeric"
+                value={minutes}
+                onChange={(e) => setMinutes(+e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Audio + Submit on the same line */}
+          <div className="audio-row">
+            <div className="audio-controls">
+              {!isRecording ? (
+                <button type="button" className="btn record" onClick={startRecording} aria-pressed="false">
+                  ● Start recording
+                </button>
+              ) : (
+                <button type="button" className="btn stop" onClick={stopRecording} aria-pressed="true">
+                  ■ Stop ({mmss(elapsed)})
+                </button>
+              )}
+              <span className="audio-hint">or</span>
+              <label className="btn file">
+                Upload audio
+                <input type="file" accept="audio/*" onChange={onUploadAudioFile} hidden />
+              </label>
+            </div>
+
+            <button type="submit" className="submit-wide">Encrypt & Schedule</button>
+          </div>
+
+          {recordingError && <div className="audio-error">{recordingError}</div>}
+
+          {audioUrl && (
+            <div className="audio-preview">
+              <audio controls src={audioUrl} />
+              <button
+                type="button"
+                className="btn ghost"
+                onClick={() => {
+                  setAudioBlob(null);
+                  if (audioUrl) URL.revokeObjectURL(audioUrl);
+                  setAudioUrl(""); setElapsed(0);
+                }}
+              >
+                Remove audio
+              </button>
+            </div>
+          )}
+
+          {lastKeyB64 && lastDownloadName && (
+            <div className="key-hint">
+              <div><strong>Last key created:</strong> <code>{lastKeyB64}</code></div>
+              <div><strong>File:</strong> <code>{lastDownloadName}</code></div>
+            </div>
+          )}
         </form>
+
+        {/* Local schedules (key reveal area) */}
+        {schedules.length > 0 && (
+          <section className="decrypt-card">
+            <h2 className="section-title">Scheduled keys</h2>
+            <div className="sched-list">
+              {schedules.map((s) => {
+                const s2 = revealIfDue(s);
+                const due = Date.now() >= new Date(s2.deliverAtISO).getTime();
+                return (
+                  <div key={s2.id} className="sched-item">
+                    <div className="sched-meta">
+                      <div><strong>File:</strong> {s2.fileName}</div>
+                      <div><strong>Unlocks at:</strong> {new Date(s2.deliverAtISO).toLocaleString()}</div>
+                    </div>
+                    <div className="sched-controls">
+                      {!due && !s2.revealedAt && (
+                        <div className="countdown">Opens in: {fmtCountdown(s2.deliverAtISO)}</div>
+                      )}
+                      {(due || s2.revealedAt) ? (
+                        <div className="key-line">
+                          <strong>Key:</strong> <code>{s2.keyB64}</code>
+                          <button
+                            className="btn"
+                            type="button"
+                            onClick={() => navigator.clipboard.writeText(s2.keyB64)}
+                          >
+                            Copy
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn ghost"
+                          onClick={() => {
+                            // manual override for testing
+                            const updated = schedules.map((x) =>
+                              x.id === s2.id ? { ...x, revealedAt: new Date().toISOString() } : x
+                            );
+                            setSchedules(updated);
+                          }}
+                        >
+                          Reveal now (test)
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn ghost"
+                        onClick={() => setSchedules(schedules.filter((x) => x.id !== s2.id))}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="muted">
+              Note: schedules are stored in <code>localStorage</code> and only reveal on this device/browser.
+            </p>
+          </section>
+        )}
+
+        {/* Decrypt section */}
+        <section className="decrypt-card">
+          <h2 className="section-title">Decrypt your time capsule</h2>
+          <div className="decrypt-row">
+            <label className="btn file">
+              Choose encrypted file
+              <input type="file" accept=".json,.enc" onChange={handleDecFile} hidden />
+            </label>
+            <input
+              className="key-input"
+              type="text"
+              placeholder="Paste decryption key (base64)"
+              value={decKeyB64}
+              onChange={(e) => setDecKeyB64(e.target.value)}
+            />
+            <button className="btn" type="button" onClick={handleDecrypt}>Decrypt</button>
+          </div>
+          {decError && <div className="audio-error">{decError}</div>}
+          {decResult && (
+            <div className="decrypt-output">
+              <div><strong>Message:</strong></div>
+              <pre className="msg-pre">{decResult.message}</pre>
+              {decResult.audio?.b64 && (
+                <a
+                  className="btn"
+                  href={`data:${decResult.audio.mime};base64,${decResult.audio.b64}`}
+                  download="timecapsule-audio"
+                >
+                  Download audio
+                </a>
+              )}
+            </div>
+          )}
+        </section>
       </main>
 
       {/* Footer */}
