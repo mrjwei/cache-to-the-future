@@ -225,6 +225,8 @@ function App() {
       setAudioBlob(null);
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       setAudioUrl(""); setElapsed(0);
+      // keep the entered Y/D/H/M; comment below if you prefer clearing:
+      // setYears(0); setDays(0); setHours(0); setMinutes(0);
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Check console.");
