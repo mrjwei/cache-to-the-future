@@ -93,6 +93,10 @@ function App() {
   const [searchName, setSearchName] = useState("");
   const [searchBirthday, setSearchBirthday] = useState("");
 
+  // Add these state variables near the other form states:
+  const [deliverAtDate, setDeliverAtDate] = useState("");
+  const [deliverAtTime, setDeliverAtTime] = useState("");
+
   const normalize = (s) => (s || "").trim().toLowerCase();
   const matchesUser = (sch, n, b) =>
     normalize(sch.ownerName) === normalize(n) &&
@@ -257,7 +261,9 @@ function App() {
     setAudioUrl(URL.createObjectURL(file));
   };
 
+  // Update totalDelayMs to return 0 if deliverAtDate is set (so we use absolute time)
   const totalDelayMs = () => {
+    if (deliverAtDate) return 0;
     const y = Math.max(0, Number.isFinite(+years) ? +years : 0);
     const d = Math.max(0, Number.isFinite(+days) ? +days : 0);
     const h = Math.max(0, Number.isFinite(+hours) ? +hours : 0);
@@ -270,10 +276,24 @@ function App() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const ms = totalDelayMs();
-      if (ms <= 0) {
-        alert("Please enter a delay greater than zero (years/days/hours/minutes).");
-        return;
+      let ms = totalDelayMs();
+      let deliverAtISO = "";
+      if (deliverAtDate) {
+        // If user picked a deliverAt date/time, use that
+        const dateStr = deliverAtDate;
+        const timeStr = deliverAtTime || "00:00";
+        const dt = new Date(`${dateStr}T${timeStr}`);
+        if (isNaN(dt.getTime()) || dt.getTime() <= Date.now()) {
+          alert("Please pick a future date and time for delivery.");
+          return;
+        }
+        deliverAtISO = dt.toISOString();
+      } else {
+        if (ms <= 0) {
+          alert("Please enter a delay greater than zero (years/days/hours/minutes), or pick a Deliver at date.");
+          return;
+        }
+        deliverAtISO = new Date(Date.now() + ms).toISOString();
       }
       if (!creatorName || !birthday) {
         alert("Please enter your name and birthday.");
@@ -314,7 +334,6 @@ function App() {
       setLastDownloadName(fileName);
 
       // schedule (store owner info for search-gate)
-      const deliverAtISO = new Date(Date.now() + ms).toISOString();
       const id = `tc_${Date.now()}`;
       setSchedules((prev) => [
         ...prev,
@@ -336,6 +355,7 @@ function App() {
       setAudioBlob(null);
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       setAudioUrl(""); setElapsed(0);
+      setDeliverAtDate(""); setDeliverAtTime(""); // Reset deliver at fields
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Check console.");
@@ -463,6 +483,7 @@ function App() {
                 inputMode="numeric"
                 value={years}
                 onChange={(e) => setYears(+e.target.value)}
+                disabled={!!deliverAtDate}
               />
             </div>
 
@@ -476,6 +497,7 @@ function App() {
                 inputMode="numeric"
                 value={days}
                 onChange={(e) => setDays(+e.target.value)}
+                disabled={!!deliverAtDate}
               />
             </div>
 
@@ -489,6 +511,7 @@ function App() {
                 inputMode="numeric"
                 value={hours}
                 onChange={(e) => setHours(+e.target.value)}
+                disabled={!!deliverAtDate}
               />
             </div>
 
@@ -502,8 +525,41 @@ function App() {
                 inputMode="numeric"
                 value={minutes}
                 onChange={(e) => setMinutes(+e.target.value)}
+                disabled={!!deliverAtDate}
               />
             </div>
+          </div>
+
+          {/* Deliver at (absolute date/time) */}
+          <div className="delivery-row" style={{ marginTop: 8, gap: 12, alignItems: "center" }}>
+            <span className="delivery-label">Deliver at</span>
+            <input
+              type="date"
+              value={deliverAtDate}
+              onChange={e => setDeliverAtDate(e.target.value)}
+              style={{ flex: "0 0 160px" }}
+              min={new Date().toISOString().slice(0, 10)}
+            />
+            <input
+              type="time"
+              value={deliverAtTime}
+              onChange={e => setDeliverAtTime(e.target.value)}
+              style={{ flex: "0 0 120px" }}
+              disabled={!deliverAtDate}
+            />
+            {deliverAtDate && (
+              <button
+                type="button"
+                className="btn ghost"
+                style={{ marginLeft: 8 }}
+                onClick={() => { setDeliverAtDate(""); setDeliverAtTime(""); }}
+              >
+                Clear
+              </button>
+            )}
+            <span className="muted" style={{ marginLeft: 8, fontSize: 13 }}>
+              {deliverAtDate ? "Overrides Deliver after" : ""}
+            </span>
           </div>
 
           {/* Audio + Submit on the same line */}
