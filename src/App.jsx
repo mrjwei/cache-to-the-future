@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import reactLogo from "./assets/react.svg";
 import "./App.css";
-import Typewriter from "./Typewriter";
+import Typewriter from "./Typewriter"; // ← added
 
 /* ========= Crypto helpers (AES-GCM) ========= */
 const enc = new TextEncoder();
@@ -82,6 +82,9 @@ function App() {
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
 
+  // Textarea ref (NEW)
+  const textareaRef = useRef(null);
+
   /* ======= Audio Recording ======= */
   const chooseMimeType = () => {
     const types = [
@@ -161,6 +164,72 @@ function App() {
   // persist schedules
   useEffect(() => { saveSchedules(schedules); }, [schedules]);
 
+  /* ======= On-screen + physical typing helpers (NEW) ======= */
+
+  // Insert at caret (handles selection and backspace) and keep caret updated
+  const insertAtCursor = (val) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setMessage((s) => (val === "\b" ? s.slice(0, -1) : s + val));
+      return;
+    }
+
+    const start = ta.selectionStart ?? message.length;
+    const end = ta.selectionEnd ?? message.length;
+
+    setMessage((prev) => {
+      if (val === "\b") {
+        if (start !== end) {
+          const next = prev.slice(0, start) + prev.slice(end);
+          queueMicrotask(() => { ta.focus(); ta.setSelectionRange(start, start); });
+          return next;
+        }
+        if (start > 0) {
+          const next = prev.slice(0, start - 1) + prev.slice(end);
+          const pos = start - 1;
+          queueMicrotask(() => { ta.focus(); ta.setSelectionRange(pos, pos); });
+          return next;
+        }
+        queueMicrotask(() => ta.focus());
+        return prev;
+      }
+
+      const next = prev.slice(0, start) + val + prev.slice(end);
+      const pos = start + val.length;
+      queueMicrotask(() => { ta.focus(); ta.setSelectionRange(pos, pos); });
+      return next;
+    });
+  };
+
+  // For the on-screen Typewriter
+  const handleVirtualKey = (val) => insertAtCursor(val);
+
+  // Physical keyboard input when textarea is NOT focused
+  useEffect(() => {
+    const isEditable = (el) => {
+      if (!el) return false;
+      const tag = el.tagName?.toLowerCase();
+      return tag === "input" || tag === "textarea" || el.isContentEditable;
+    };
+
+    const onKeyDown = (e) => {
+      if (isEditable(document.activeElement)) return; // let browser handle it
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === "Backspace") { e.preventDefault(); insertAtCursor("\b"); return; }
+      if (e.key === "Enter")     { e.preventDefault(); insertAtCursor("\n"); return; }
+      if (e.key === " ")         { e.preventDefault(); insertAtCursor(" ");  return; }
+
+      if (e.key && e.key.length === 1) {
+        e.preventDefault();
+        insertAtCursor(e.key);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []); // run once
+
   /* ======= Handlers ======= */
   const onUploadAudioFile = (e) => {
     const file = e.target.files?.[0];
@@ -226,8 +295,7 @@ function App() {
       setAudioBlob(null);
       if (audioUrl) URL.revokeObjectURL(audioUrl);
       setAudioUrl(""); setElapsed(0);
-      // keep the entered Y/D/H/M; comment below if you prefer clearing:
-      // setYears(0); setDays(0); setHours(0); setMinutes(0);
+      // keep the entered Y/D/H/M
     } catch (err) {
       console.error(err);
       alert("Something went wrong. Check console.");
@@ -296,15 +364,18 @@ function App() {
 
         <form className="contact-form" onSubmit={handleSubmit}>
           <label htmlFor="message">Your message</label>
+
+          {/* On-screen keyboard (now writes to the field instantly) */}
+          <Typewriter onVirtualKey={handleVirtualKey} />
+          
           <textarea
             id="message"
+            ref={textareaRef} /* ← added */
             placeholder="Write your thoughts here…"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             required
           />
-          
-          <Typewriter />
 
           {/* Flexible Deliver After */}
           <div className="delivery-row delivery-grid">
