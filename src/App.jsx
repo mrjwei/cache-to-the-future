@@ -375,16 +375,32 @@ function App() {
   return (
     <div className="app">
       {/* Header */}
-      <header className="app-header">
+      {/* <header className="app-header">
         <img src={reactLogo} alt="App icon" className="favicon" />
         <span className="logo-text">Cache to the Future</span>
-      </header>
+      </header> */}
 
       {/* Main */}
       <main className="app-main">
-        <h1 className="page-title">Enter your message!</h1>
+        {/* <h1 className="page-title">Enter your message!</h1> */}
 
         <form className="contact-form" onSubmit={handleSubmit}>
+          {/* <label htmlFor="message">Your message</label> */}
+
+          <textarea
+            id="message"
+            ref={textareaRef}
+            placeholder="Write your thoughts here…"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            required
+          />
+
+          {/* On-screen keyboard (wrapped so it never clips) */}
+          <div className="typewriter-wrapper">
+            <Typewriter onVirtualKey={handleVirtualKey} />
+          </div>
+
           {/* Name & Birthday */}
           <label htmlFor="creatorName">Your name</label>
           <input
