@@ -27,15 +27,15 @@ html, body {
   font-family: 'Pixelify Sans', monospace;
 
   /* Base + retro diagonal pixel lines + color blooms */
-  background-color: var(--bg-1);
+  /* background-color: var(--bg-1); */
   background-image:
     /* retro diagonal hatch (two opposing) */
     repeating-linear-gradient(135deg, rgba(255,255,255,0.05) 0 1px, rgba(0,0,0,0) 1px 7px),
     repeating-linear-gradient(315deg, rgba(0,0,0,0.06) 0 1px, rgba(0,0,0,0) 1px 7px),
     /* soft color blooms */
-    radial-gradient(60% 40% at 20% 15%, rgb(var(--hl-violet) / 0.18), transparent 60%),
-    radial-gradient(50% 35% at 80% 12%,   rgb(var(--hl-cyan) / 0.14),   transparent 65%),
-    radial-gradient(75% 55% at 70% 80%,   rgb(var(--hl-pink) / 0.10),   transparent 70%),
+    radial-gradient(60% 40% at 20% 15%, rgb(var(--hl-violet) / 0.5), transparent 60%),
+    radial-gradient(50% 35% at 80% 12%,   rgb(var(--hl-cyan) / 0.3),   transparent 65%),
+    radial-gradient(75% 55% at 70% 80%,   rgb(var(--hl-pink) / 0.2),   transparent 70%),
     radial-gradient(120% 100% at 50% 60%, var(--bg-1), var(--bg-0) 60%, #070b10 100%);
   background-attachment: fixed, fixed, fixed, fixed, fixed, fixed;
   background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat;
@@ -51,6 +51,29 @@ html { scroll-behavior: smooth; }
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+.app {
+  max-width: 1920px;
+  margin: 0 auto;
+  /* padding: 20vh 32px 0; */
+  background: url(./assets/typewriter.svg) top center no-repeat;
+  background-size: contain; /* make it scale to the element’s width */
+}
+
+#root {
+  margin: 0 auto;
+}
+
+.message-group {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+#message {
+  display: block;
+  width: 100%;
 }
 
 /* === Main === */
@@ -105,9 +128,9 @@ html { scroll-behavior: smooth; }
   display: flex;
   flex-direction: column;
   gap: 12px;
-  background: color-mix(in oklab, var(--panel) 92%, black 8%);
+  /* background: color-mix(in oklab, var(--panel) 92%, black 8%); */
   padding: 20px;
-  border: 2px solid var(--border);
+  /* border: 2px solid var(--border); */
   border-radius: 0;               /* sharp edges */
   width: 100%;
   max-width: 900px;               /* readable line length */
@@ -133,6 +156,9 @@ html { scroll-behavior: smooth; }
 .contact-form textarea {
   min-height: 120px;
   resize: vertical;
+  background: white;
+  border: none;
+  color: black;
 }
 
 /* === Rows & grids === */
