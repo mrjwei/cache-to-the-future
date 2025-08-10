@@ -19,6 +19,14 @@ export default function Typewriter({ onVirtualKey }) {
 
   /* ---------- rows ---------- */
   const rowNums    = ["1","2","3","4","5","6","7","8","9","0"];
+  /* ---------- sound ---------- */
+  const keySound = useMemo(() => new Audio("mixkit-mechanical-typewriter-hit-1365.wav"), []); // put your sound file in /public
+
+  const playKeySound = () => {
+    keySound.currentTime = 0; // rewind so rapid presses still play
+    keySound.play().catch(() => {}); // ignore autoplay restrictions errors
+  };
+
   const rowQZERTY  = ["Q","Z","E","R","T","Y","U","I","O","P"];
   const rowASDF    = ["A","S","D","F","G","H","J","K","L"];
   const rowWXCV    = ["W","X","C","V","B","N","M"];
@@ -89,6 +97,7 @@ export default function Typewriter({ onVirtualKey }) {
   const send = (val) => onVirtualKey && onVirtualKey(val);
 
   const handleVirtualPress = (code, payload) => {
+    playKeySound(); // Play the key sound on every virtual key press
     if (!onVirtualKey) return;
     if (code === "ShiftLeft") { setShiftLatched(true); return; }
     if (code === "Space")     { send(" "); setShiftLatched(false); return; }
@@ -114,6 +123,7 @@ export default function Typewriter({ onVirtualKey }) {
 
     const down = (e) => {
       if (!e.repeat) {
+        playKeySound(); // Play the key sound on keydown
         setHover(e.code, true);
         setActive(e.code, true);
         if (e.code === "ShiftLeft" || e.code === "ShiftRight") setShiftLatched(true);
