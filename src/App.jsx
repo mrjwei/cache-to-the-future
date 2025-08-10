@@ -407,11 +407,7 @@ function App() {
 
           <label htmlFor="message">Your message</label>
 
-          {/* On-screen keyboard (wrapped so it never clips) */}
-          <div className="typewriter-wrapper">
-            <Typewriter onVirtualKey={handleVirtualKey} />
-          </div>
-
+          {/* >>> TEXTAREA MOVED ABOVE TYPEWRITER <<< */}
           <textarea
             id="message"
             ref={textareaRef}
@@ -421,15 +417,12 @@ function App() {
             required
           />
 
-          {/* Handy jump button for long pages */}
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => document.getElementById("decrypt")?.scrollIntoView({ behavior: "smooth" })}
-            style={{ alignSelf: "flex-start", marginTop: "8px" }}
-          >
-            ↓ Scroll to Decrypt
-          </button>
+          {/* On-screen keyboard BELOW the textarea now */}
+          <div className="typewriter-wrapper">
+            <Typewriter onVirtualKey={handleVirtualKey} />
+          </div>
+
+          {/* Removed the "Scroll to Decrypt" button */}
 
           {/* Flexible Deliver After */}
           <div className="delivery-row delivery-grid">
@@ -488,7 +481,7 @@ function App() {
             </div>
           </div>
 
-          {/* Audio + Submit on the same line */}
+          {/* Audio controls stay grouped */}
           <div className="audio-row">
             <div className="audio-controls">
               {!isRecording ? (
@@ -506,8 +499,11 @@ function App() {
                 <input type="file" accept="audio/*" onChange={onUploadAudioFile} hidden />
               </label>
             </div>
+          </div>
 
-            <button type="submit" className="submit-wide">Encrypt & Schedule</button>
+          {/* CTA on its own line and centered */}
+          <div className="submit-row">
+            <button type="submit" className="btn submit-wide">Encrypt & Schedule</button>
           </div>
 
           {recordingError && <div className="audio-error">{recordingError}</div>}
