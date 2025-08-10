@@ -386,23 +386,27 @@ function App() {
 
         <form className="contact-form" onSubmit={handleSubmit}>
           {/* <label htmlFor="message">Your message</label> */}
+          <div className="message-group">
+            {/* <label htmlFor="message" style={{color: 'black'}}>Your message</label> */}
+            <textarea
+              id="message"
+              ref={textareaRef}
+              placeholder="Write your thoughts here…"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              required
+            />
+          </div>
 
-          <textarea
-            id="message"
-            ref={textareaRef}
-            placeholder="Write your thoughts here…"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            required
-          />
-
-          {/* On-screen keyboard (wrapped so it never clips) */}
-          <div className="typewriter-wrapper">
+          {/* On-screen keyboard BELOW the textarea now */}
+          <div className="typewriter-wrapper" style={{padding: '220px 85px 0'}}>
             <Typewriter onVirtualKey={handleVirtualKey} />
           </div>
 
+          {/* Removed the "Scroll to Decrypt" button */}
+
           {/* Name & Birthday */}
-          <label htmlFor="creatorName">Your name</label>
+          <label htmlFor="creatorName" style={{marginTop: '30px'}}>Your name</label>
           <input
             id="creatorName"
             type="text"
@@ -420,25 +424,6 @@ function App() {
             onChange={(e) => setBirthday(e.target.value)}
             required
           />
-
-          <label htmlFor="message">Your message</label>
-
-          {/* >>> TEXTAREA MOVED ABOVE TYPEWRITER <<< */}
-          <textarea
-            id="message"
-            ref={textareaRef}
-            placeholder="Write your thoughts here…"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            required
-          />
-
-          {/* On-screen keyboard BELOW the textarea now */}
-          <div className="typewriter-wrapper">
-            <Typewriter onVirtualKey={handleVirtualKey} />
-          </div>
-
-          {/* Removed the "Scroll to Decrypt" button */}
 
           {/* Flexible Deliver After */}
           <div className="delivery-row delivery-grid">

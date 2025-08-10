@@ -1,5 +1,7 @@
 .board {
   width: min(900px, 92vw);
+  position: relative;
+  left: 15px;
 }
 
 /* Key base style */
@@ -12,8 +14,6 @@
   fill: #1b1e24;
   stroke: #3a3f4b;
   stroke-width: 2;
-  rx: 50%;
-  ry: 50%;
 }
 
 /* Key labels */
