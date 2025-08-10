@@ -373,286 +373,285 @@ function App() {
   };
 
   return (
-    <div className="app">
-      {/* Header */}
-      {/* <header className="app-header">
-        <img src={reactLogo} alt="App icon" className="favicon" />
-        <span className="logo-text">Cache to the Future</span>
-      </header> */}
+    <>
+      <header className="app-header" style={{display: 'flex', justifyContent: 'center'}}>
+        <img src="src/assets/Cache_to_the_Future_Logo-removebg-preview.png" alt="" width={100} />
+      </header>
+      <div className="app">
+        {/* Main */}
+        <main className="app-main">
+          {/* <h1 className="page-title">Enter your message!</h1> */}
 
-      {/* Main */}
-      <main className="app-main">
-        {/* <h1 className="page-title">Enter your message!</h1> */}
+          <form className="contact-form" onSubmit={handleSubmit}>
+            {/* <label htmlFor="message">Your message</label> */}
+            <div className="message-group">
+              {/* <label htmlFor="message" style={{color: 'black'}}>Your message</label> */}
+              <textarea
+                id="message"
+                ref={textareaRef}
+                placeholder="Write your thoughts here…"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                required
+              />
+            </div>
 
-        <form className="contact-form" onSubmit={handleSubmit}>
-          {/* <label htmlFor="message">Your message</label> */}
-          <div className="message-group">
-            {/* <label htmlFor="message" style={{color: 'black'}}>Your message</label> */}
-            <textarea
-              id="message"
-              ref={textareaRef}
-              placeholder="Write your thoughts here…"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
+            {/* On-screen keyboard BELOW the textarea now */}
+            <div className="typewriter-wrapper" style={{padding: '220px 85px 0'}}>
+              <Typewriter onVirtualKey={handleVirtualKey} />
+            </div>
+
+            {/* Removed the "Scroll to Decrypt" button */}
+
+            {/* Name & Birthday */}
+            <label htmlFor="creatorName" style={{marginTop: '30px'}}>Your name</label>
+            <input
+              id="creatorName"
+              type="text"
+              placeholder="e.g., Hana Tanaka"
+              value={creatorName}
+              onChange={(e) => setCreatorName(e.target.value)}
               required
             />
-          </div>
 
-          {/* On-screen keyboard BELOW the textarea now */}
-          <div className="typewriter-wrapper" style={{padding: '220px 85px 0'}}>
-            <Typewriter onVirtualKey={handleVirtualKey} />
-          </div>
+            <label htmlFor="birthday">Birthday</label>
+            <input
+              id="birthday"
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              required
+            />
 
-          {/* Removed the "Scroll to Decrypt" button */}
+            {/* Flexible Deliver After */}
+            <div className="delivery-row delivery-grid">
+              <span className="delivery-label">Deliver after</span>
 
-          {/* Name & Birthday */}
-          <label htmlFor="creatorName" style={{marginTop: '30px'}}>Your name</label>
-          <input
-            id="creatorName"
-            type="text"
-            placeholder="e.g., Hana Tanaka"
-            value={creatorName}
-            onChange={(e) => setCreatorName(e.target.value)}
-            required
-          />
+              <div className="num-field">
+                <label htmlFor="years">Years</label>
+                <input
+                  id="years"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={years}
+                  onChange={(e) => setYears(+e.target.value)}
+                />
+              </div>
 
-          <label htmlFor="birthday">Birthday</label>
-          <input
-            id="birthday"
-            type="date"
-            value={birthday}
-            onChange={(e) => setBirthday(e.target.value)}
-            required
-          />
+              <div className="num-field">
+                <label htmlFor="days">Days</label>
+                <input
+                  id="days"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={days}
+                  onChange={(e) => setDays(+e.target.value)}
+                />
+              </div>
 
-          {/* Flexible Deliver After */}
-          <div className="delivery-row delivery-grid">
-            <span className="delivery-label">Deliver after</span>
+              <div className="num-field">
+                <label htmlFor="hours">Hours</label>
+                <input
+                  id="hours"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={hours}
+                  onChange={(e) => setHours(+e.target.value)}
+                />
+              </div>
 
-            <div className="num-field">
-              <label htmlFor="years">Years</label>
-              <input
-                id="years"
-                type="number"
-                min="0"
-                step="1"
-                inputMode="numeric"
-                value={years}
-                onChange={(e) => setYears(+e.target.value)}
-              />
+              <div className="num-field">
+                <label htmlFor="minutes">Minutes</label>
+                <input
+                  id="minutes"
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  value={minutes}
+                  onChange={(e) => setMinutes(+e.target.value)}
+                />
+              </div>
             </div>
 
-            <div className="num-field">
-              <label htmlFor="days">Days</label>
-              <input
-                id="days"
-                type="number"
-                min="0"
-                step="1"
-                inputMode="numeric"
-                value={days}
-                onChange={(e) => setDays(+e.target.value)}
-              />
+            {/* Audio controls stay grouped */}
+            <div className="audio-row">
+              <div className="audio-controls">
+                {!isRecording ? (
+                  <button type="button" className="btn record" onClick={startRecording} aria-pressed="false">
+                    ● Start recording
+                  </button>
+                ) : (
+                  <button type="button" className="btn stop" onClick={stopRecording} aria-pressed="true">
+                    ■ Stop ({mmss(elapsed)})
+                  </button>
+                )}
+                <span className="audio-hint">or</span>
+                <label className="btn file">
+                  Upload audio
+                  <input type="file" accept="audio/*" onChange={onUploadAudioFile} hidden />
+                </label>
+              </div>
             </div>
 
-            <div className="num-field">
-              <label htmlFor="hours">Hours</label>
-              <input
-                id="hours"
-                type="number"
-                min="0"
-                step="1"
-                inputMode="numeric"
-                value={hours}
-                onChange={(e) => setHours(+e.target.value)}
-              />
+            {/* CTA on its own line and centered */}
+            <div className="submit-row">
+              <button type="submit" className="btn submit-wide">Encrypt & Schedule</button>
             </div>
 
-            <div className="num-field">
-              <label htmlFor="minutes">Minutes</label>
-              <input
-                id="minutes"
-                type="number"
-                min="0"
-                step="1"
-                inputMode="numeric"
-                value={minutes}
-                onChange={(e) => setMinutes(+e.target.value)}
-              />
-            </div>
-          </div>
+            {recordingError && <div className="audio-error">{recordingError}</div>}
 
-          {/* Audio controls stay grouped */}
-          <div className="audio-row">
-            <div className="audio-controls">
-              {!isRecording ? (
-                <button type="button" className="btn record" onClick={startRecording} aria-pressed="false">
-                  ● Start recording
+            {audioUrl && (
+              <div className="audio-preview">
+                <audio controls src={audioUrl} />
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => {
+                    setAudioBlob(null);
+                    if (audioUrl) URL.revokeObjectURL(audioUrl);
+                    setAudioUrl(""); setElapsed(0);
+                  }}
+                >
+                  Remove audio
                 </button>
-              ) : (
-                <button type="button" className="btn stop" onClick={stopRecording} aria-pressed="true">
-                  ■ Stop ({mmss(elapsed)})
-                </button>
-              )}
-              <span className="audio-hint">or</span>
-              <label className="btn file">
-                Upload audio
-                <input type="file" accept="audio/*" onChange={onUploadAudioFile} hidden />
-              </label>
-            </div>
-          </div>
+              </div>
+            )}
 
-          {/* CTA on its own line and centered */}
-          <div className="submit-row">
-            <button type="submit" className="btn submit-wide">Encrypt & Schedule</button>
-          </div>
+            {lastKeyB64 && lastDownloadName && (
+              <div className="key-hint">
+                <div><strong>Last key created:</strong> <code>{lastKeyB64}</code></div>
+                <div><strong>File:</strong> <code>{lastDownloadName}</code></div>
+              </div>
+            )}
+          </form>
 
-          {recordingError && <div className="audio-error">{recordingError}</div>}
-
-          {audioUrl && (
-            <div className="audio-preview">
-              <audio controls src={audioUrl} />
-              <button
-                type="button"
-                className="btn ghost"
-                onClick={() => {
-                  setAudioBlob(null);
-                  if (audioUrl) URL.revokeObjectURL(audioUrl);
-                  setAudioUrl(""); setElapsed(0);
-                }}
-              >
-                Remove audio
-              </button>
-            </div>
-          )}
-
-          {lastKeyB64 && lastDownloadName && (
-            <div className="key-hint">
-              <div><strong>Last key created:</strong> <code>{lastKeyB64}</code></div>
-              <div><strong>File:</strong> <code>{lastDownloadName}</code></div>
-            </div>
-          )}
-        </form>
-
-        {/* Local schedules (key reveal area) */}
-        {schedules.length > 0 && (
-          <section className="decrypt-card">
-            <h2 className="section-title">Scheduled keys</h2>
-            <div className="sched-list">
-              {schedules.map((s) => {
-                const s2 = revealIfDue(s);
-                const due = Date.now() >= new Date(s2.deliverAtISO).getTime();
-                return (
-                  <div key={s2.id} className="sched-item">
-                    <div className="sched-meta">
-                      <div><strong>File:</strong> {s2.fileName}</div>
-                      <div><strong>Owner:</strong> {s2.fileName?.match(/^CTTF-([^_]+)/)?.[1] || "—"}</div>
-                      <div><strong>Birthday:</strong> {s2.fileName?.match(/^CTTF-[^_]+_([^_]+)/)?.[1] || "—"}</div>
-                      <div><strong>Unlocks at:</strong> {new Date(s2.deliverAtISO).toLocaleString()}</div>
-                    </div>
-                    <div className="sched-controls">
-                      {!due && !s2.revealedAt && (
-                        <div className="countdown">Opens in: {fmtCountdown(s2.deliverAtISO)}</div>
-                      )}
-                      {(due || s2.revealedAt) ? (
-                        <>
-                          <div className="key-line">
-                            <strong>Key:</strong> <code>{s2.keyB64}</code>
-                            <button
-                              className="btn"
-                              type="button"
-                              onClick={() => navigator.clipboard.writeText(s2.keyB64)}
-                            >
-                              Copy
-                            </button>
-                          </div>
-                          {s2.descKey && (
+          {/* Local schedules (key reveal area) */}
+          {schedules.length > 0 && (
+            <section className="decrypt-card">
+              <h2 className="section-title">Scheduled keys</h2>
+              <div className="sched-list">
+                {schedules.map((s) => {
+                  const s2 = revealIfDue(s);
+                  const due = Date.now() >= new Date(s2.deliverAtISO).getTime();
+                  return (
+                    <div key={s2.id} className="sched-item">
+                      <div className="sched-meta">
+                        <div><strong>File:</strong> {s2.fileName}</div>
+                        <div><strong>Owner:</strong> {s2.fileName?.match(/^CTTF-([^_]+)/)?.[1] || "—"}</div>
+                        <div><strong>Birthday:</strong> {s2.fileName?.match(/^CTTF-[^_]+_([^_]+)/)?.[1] || "—"}</div>
+                        <div><strong>Unlocks at:</strong> {new Date(s2.deliverAtISO).toLocaleString()}</div>
+                      </div>
+                      <div className="sched-controls">
+                        {!due && !s2.revealedAt && (
+                          <div className="countdown">Opens in: {fmtCountdown(s2.deliverAtISO)}</div>
+                        )}
+                        {(due || s2.revealedAt) ? (
+                          <>
                             <div className="key-line">
-                              <strong>Description key:</strong> <code>{s2.descKey}</code>
+                              <strong>Key:</strong> <code>{s2.keyB64}</code>
                               <button
                                 className="btn"
                                 type="button"
-                                onClick={() => navigator.clipboard.writeText(s2.descKey)}
+                                onClick={() => navigator.clipboard.writeText(s2.keyB64)}
                               >
                                 Copy
                               </button>
                             </div>
-                          )}
-                        </>
-                      ) : (
+                            {s2.descKey && (
+                              <div className="key-line">
+                                <strong>Description key:</strong> <code>{s2.descKey}</code>
+                                <button
+                                  className="btn"
+                                  type="button"
+                                  onClick={() => navigator.clipboard.writeText(s2.descKey)}
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            className="btn ghost"
+                            onClick={() => {
+                              const updated = schedules.map((x) =>
+                                x.id === s2.id ? { ...x, revealedAt: new Date().toISOString() } : x
+                              );
+                              setSchedules(updated);
+                            }}
+                          >
+                            Reveal now (test)
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="btn ghost"
-                          onClick={() => {
-                            const updated = schedules.map((x) =>
-                              x.id === s2.id ? { ...x, revealedAt: new Date().toISOString() } : x
-                            );
-                            setSchedules(updated);
-                          }}
+                          onClick={() => setSchedules(schedules.filter((x) => x.id !== s2.id))}
                         >
-                          Reveal now (test)
+                          Remove
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        className="btn ghost"
-                        onClick={() => setSchedules(schedules.filter((x) => x.id !== s2.id))}
-                      >
-                        Remove
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="muted">
-              Note: schedules are stored in <code>localStorage</code> and only reveal on this device/browser.
-            </p>
-          </section>
-        )}
-
-        {/* Decrypt section */}
-        <section id="decrypt" className="decrypt-card">
-          <h2 className="section-title">Decrypt your time capsule</h2>
-          <div className="decrypt-row">
-            <label className="btn file">
-              Choose encrypted file
-              <input type="file" accept=".json,.enc" onChange={handleDecFile} hidden />
-            </label>
-            <input
-              className="key-input"
-              type="text"
-              placeholder="Paste decryption key (base64)"
-              value={decKeyB64}
-              onChange={(e) => setDecKeyB64(e.target.value)}
-            />
-            <button className="btn" type="button" onClick={handleDecrypt}>Decrypt</button>
-          </div>
-          {decError && <div className="audio-error">{decError}</div>}
-          {decResult && (
-            <div className="decrypt-output">
-              <div><strong>Message:</strong></div>
-              <pre className="msg-pre">{decResult.message}</pre>
-              {decResult.audio?.b64 && (
-                <a
-                  className="btn"
-                  href={`data:${decResult.audio.mime};base64,${decResult.audio.b64}`}
-                  download="timecapsule-audio"
-                >
-                  Download audio
-                </a>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+              <p className="muted">
+                Note: schedules are stored in <code>localStorage</code> and only reveal on this device/browser.
+              </p>
+            </section>
           )}
-        </section>
-      </main>
 
-      {/* Footer */}
-      <footer className="app-footer">
-        <img src={reactLogo} alt="App icon" className="favicon" />
-        <span className="logo-text">Cache to the Future</span>
-      </footer>
-    </div>
+          {/* Decrypt section */}
+          <section id="decrypt" className="decrypt-card">
+            <h2 className="section-title">Decrypt your time capsule</h2>
+            <div className="decrypt-row">
+              <label className="btn file">
+                Choose encrypted file
+                <input type="file" accept=".json,.enc" onChange={handleDecFile} hidden />
+              </label>
+              <input
+                className="key-input"
+                type="text"
+                placeholder="Paste decryption key (base64)"
+                value={decKeyB64}
+                onChange={(e) => setDecKeyB64(e.target.value)}
+              />
+              <button className="btn" type="button" onClick={handleDecrypt}>Decrypt</button>
+            </div>
+            {decError && <div className="audio-error">{decError}</div>}
+            {decResult && (
+              <div className="decrypt-output">
+                <div><strong>Message:</strong></div>
+                <pre className="msg-pre">{decResult.message}</pre>
+                {decResult.audio?.b64 && (
+                  <a
+                    className="btn"
+                    href={`data:${decResult.audio.mime};base64,${decResult.audio.b64}`}
+                    download="timecapsule-audio"
+                  >
+                    Download audio
+                  </a>
+                )}
+              </div>
+            )}
+          </section>
+        </main>
+
+        {/* Footer */}
+        {/* <footer className="app-footer">
+          <img src={reactLogo} alt="App icon" className="favicon" />
+          <span className="logo-text">Cache to the Future</span>
+        </footer> */}
+      </div>
+    </>
   );
 }
 
