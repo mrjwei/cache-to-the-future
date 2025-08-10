@@ -1,7 +1,7 @@
 .board {
-  width: min(900px, 92vw);
+  width: min(900px, 90vw);
   position: relative;
-  left: 15px;
+  left: 30px;
 }
 
 /* Key base style */
